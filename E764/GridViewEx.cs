@@ -104,7 +104,7 @@ namespace E764
             if (!((DragRowInfo == null) || (CurrentGroupRowInfo == null)))
             {
                 Debug.WriteLine($"{DragRowInfo.GroupValueText} {CurrentGroupRowInfo.GroupValueText}");
-                var drags = 
+                var drags =
                     dataTable
                     .Rows
                     .Cast<DataRow>()
@@ -156,17 +156,18 @@ namespace E764
                     dataRow.ItemArray = dict[dataRow];
                     dataTable.Rows.InsertAt(dataRow, insertIndex);
                 }
-                if (_isExpanded)
+                try
                 {
-                    try
+                    var parentRowHandle = GetParentRowHandle(insertIndex);
+                    if (_isExpanded)
                     {
-                        var parentRowHandle = GetParentRowHandle(insertIndex);
                         ExpandGroupRow(parentRowHandle);
                     }
-                    catch (Exception ex)
-                    {
-                        Debug.Assert(false, ex.Message);
-                    }
+                    FocusedRowHandle = parentRowHandle;
+                }
+                catch (Exception ex)
+                {
+                    Debug.Assert(false, ex.Message);
                 }
             }
         }
