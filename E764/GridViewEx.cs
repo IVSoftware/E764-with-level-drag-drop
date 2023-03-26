@@ -92,6 +92,9 @@ namespace E764
                     break;
             }
         }
+        private Point _mouseDownClient = Point.Empty;
+        private int _mouseDeltaX = 0;
+        private int _mouseDeltaY = 0;
 
         protected virtual void OnCustomColumnSort(object sender, CustomColumnSortEventArgs e)
         {
@@ -247,6 +250,24 @@ namespace E764
             }
         }
 
+        void getRowScreenshot()
+        {
+            // MUST be set to DPI AWARE in config.cs
+            var ctl = GridControl;
+            var screenRow = ctl.PointToScreen(DragRowInfo.Bounds.Location);
+            var screenParent = ctl.TopLevelControl.Location;
+
+            using (var srceGraphics = ctl.CreateGraphics())
+            {
+                var size = DragRowInfo.Bounds.Size;
+
+                var bitmap = new Bitmap(size.Width, size.Height, srceGraphics);
+                var destGraphics = Graphics.FromImage(bitmap);
+                destGraphics.CopyFromScreen(screenRow.X, screenRow.Y, 0, 0, size);
+                _dragFeedbackLabel.BackgroundImage = bitmap;
+            }
+        }
+
         internal DragFeedback _dragFeedbackLabel { get; } = new DragFeedback
         {
             Name = "DragFeedback",
@@ -290,28 +311,7 @@ namespace E764
         GroupDragDropState _groupDragDropState = default(GroupDragDropState);
         #endregion P R O P E R T I E S
 
-        void getRowScreenshot()
-        {
-            // MUST be set to DPI AWARE in config.cs
-            var ctl = GridControl;
-            var screenRow = ctl.PointToScreen(DragRowInfo.Bounds.Location);
-            var screenParent = ctl.TopLevelControl.Location;
-
-            using (var srceGraphics = ctl.CreateGraphics())
-            {
-                var size = DragRowInfo.Bounds.Size;
-
-                var bitmap = new Bitmap(size.Width, size.Height, srceGraphics);
-                var destGraphics = Graphics.FromImage(bitmap);
-                destGraphics.CopyFromScreen(screenRow.X, screenRow.Y, 0, 0, size);
-                _dragFeedbackLabel.BackgroundImage = bitmap;
-            }
-        }
-
         private bool _isGroupRow;
         private bool _isExpanded;
-        private Point _mouseDownClient = Point.Empty;
-        private int _mouseDeltaX = 0;
-        private int _mouseDeltaY = 0;
     }
 }
