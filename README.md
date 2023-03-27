@@ -2,7 +2,7 @@ This answer uses a custom `GridViewEx` class inherited from `GridView` which all
 
 - Before or After Target Row
 - Expanded rows stay expanded
-- Drag feedback similar to row version
+- Drag feedback similar to record version
 
 This custom version is simply swapped out manually in the Designer.cs file.
 
@@ -115,7 +115,7 @@ The `Drag` state is entered if the mouse-down cursor travels more than 10 positi
 ***
 **Drag Feedback**
 
-Entering the drag state takes a screenshot of the clicked row. *In order for* `Graphics.CopyFromScreen` *to work properly, the appconfig.cs has been modified to per-screen DPI awareness*.
+Entering the drag state takes a screenshot of the clicked row. *To ensure the proper operation of the* `Graphics.CopyFromScreen` *method, the appconfig.cs has been modified to per-screen DPI awareness*.
 
 
 appconfig.cs
@@ -174,7 +174,7 @@ GridViewEx.cs
         }
     }
 
-This image is assigned to the `BackgroundImage` of the `_dragFeedbackLabel` member which is a borderless form that can be drawn outside the rectangle of the main form. When visible, this form tracks the mouse cursor movement by means of a MessageFilter intercepting `WM_MOUSEMOVE` messages.
+This image is assigned to the `BackgroundImage` of the `_dragFeedbackLabel` member which is a borderless form that can be drawn outside the rectangle of the main form. When visible, this form tracks the mouse cursor movement by means of a `MessageFilter` intercepting `WM_MOUSEMOVE` messages.
 
     class DragFeedback : Form, IMessageFilter
     {
@@ -273,10 +273,33 @@ The row dividers are drawn by handling the `GridView.CustomDrawGroupRow` event.
         }
     }
 
+When the `DropBelow` value toggles at the midpoint of the drag over _or_ when the target row changes, the affected row(s) need to be redrawn.
+
+    public bool DropBelow
+    {
+        get => _dropBelow;
+        set
+        {
+            if (!Equals(_dropBelow, value))
+            {
+                _dropBelow = value;
+    #if true
+                // "Minimal redraw" version
+                RefreshRow(CurrentGroupRowInfo.RowHandle);
+    #else
+                // But if drawing artifacts are present, refresh
+                // the entire control surface instead.
+                GridControl.Refresh();
+    #endif
+            }
+        }
+    }
+    bool _dropBelow = false;
+
 ***
 **OnDrop**
 
-The `ItemsArray` for the removed records is stashed in a dictionary to allow reassignment before adding inserting the same `DataRow` instance at a new index. Adjustments to the insert operation are made depending on the value of the `DropBelow` boolean which was set in the `MouseMove` handler.
+The `ItemsArray` for the removed records is stashed in a dictionary to allow reassignment before inserting the same `DataRow` instance at a new index. Adjustments to the insert operation are made depending on the value of the `DropBelow` boolean which was set in the `MouseMove` handler.
 
     protected virtual void OnDrop()
     {
@@ -350,6 +373,36 @@ The `ItemsArray` for the removed records is stashed in a dictionary to allow rea
                 Debug.Assert(false, ex.Message);
             }
         }
+    }
+
+***
+**Misc**
+
+`GridViewEx` takes a blanket approach to enabling custom sort only, and preliminary testing shows that drag drop in its present form works the same for the Keyword grouping as it does for Level.
+
+    /// <summary>
+    /// Disable automatic sorting. 
+    /// </summary>
+    protected virtual void OnDataSourceChanged(object sender, EventArgs e)
+    {
+        foreach (GridColumn column in Columns)
+        {
+            column.SortMode = ColumnSortMode.Custom;
+        }
+        ExpandGroupLevel(1);
+    }
+
+    protected virtual void OnCustomColumnSort(object sender, CustomColumnSortEventArgs e)
+    {
+        e.Handled = true;
+    }
+
+    /// <summary>
+    /// Disallow collapses during drag operations
+    /// </summary>
+    protected virtual void OnGroupRowCollapsing(object sender, RowAllowEventArgs e)
+    {
+        e.Allow = GroupDragDropState.Equals(GroupDragDropState.None);
     }
 
   [1]: https://i.stack.imgur.com/jrsNW.png

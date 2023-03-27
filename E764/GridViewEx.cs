@@ -30,7 +30,7 @@ namespace E764
             MouseUp += OnMouseUp;
             CustomDrawGroupRow += OnCustomDrawGroupRow;
             DataSourceChanged += OnDataSourceChanged;
-            DisableCurrencyManager = true; // Use this setting From sample code.
+            DisableCurrencyManager = true; // Use this setting from sample code.
             GroupRowCollapsing += OnGroupRowCollapsing;
             CustomColumnSort += OnCustomColumnSort;
         }
@@ -95,11 +95,6 @@ namespace E764
         private Point _mouseDownClient = Point.Empty;
         private int _mouseDeltaX = 0;
         private int _mouseDeltaY = 0;
-
-        protected virtual void OnCustomColumnSort(object sender, CustomColumnSortEventArgs e)
-        {
-            e.Handled = true;
-        }
 
         protected virtual void OnDrop()
         {
@@ -210,11 +205,6 @@ namespace E764
             }
         }
 
-        protected virtual void OnGroupRowCollapsing(object sender, RowAllowEventArgs e)
-        {
-            e.Allow = GroupDragDropState.Equals(GroupDragDropState.None);
-        }
-
         /// <summary>
         /// Disable automatic sorting. 
         /// </summary>
@@ -225,6 +215,19 @@ namespace E764
                 column.SortMode = ColumnSortMode.Custom;
             }
             ExpandGroupLevel(1);
+        }
+
+        protected virtual void OnCustomColumnSort(object sender, CustomColumnSortEventArgs e)
+        {
+            e.Handled = true;
+        }
+
+        /// <summary>
+        /// Disallow collapses during drag operations
+        /// </summary>
+        protected virtual void OnGroupRowCollapsing(object sender, RowAllowEventArgs e)
+        {
+            e.Allow = GroupDragDropState.Equals(GroupDragDropState.None);
         }
         protected virtual void OnGroupDragDropStateChanged()
         {
@@ -276,24 +279,30 @@ namespace E764
         };
 
         #region P R O P E R T I E S
-        GridGroupRowInfo _dragRowInfo = default(GridGroupRowInfo);
         public GridGroupRowInfo DragRowInfo { get; set; }
 
         public GridGroupRowInfo CurrentGroupRowInfo { get; set; }
 
-        public bool DropBelow
+    public bool DropBelow
+    {
+        get => _dropBelow;
+        set
         {
-            get => _dropBelow;
-            set
+            if (!Equals(_dropBelow, value))
             {
-                if (!Equals(_dropBelow, value))
-                {
-                    _dropBelow = value;
-                    RefreshRow(CurrentGroupRowInfo.RowHandle);
-                }
+                _dropBelow = value;
+    #if true
+                // "Minimal redraw" version
+                RefreshRow(CurrentGroupRowInfo.RowHandle);
+    #else
+                // But if drawing artifacts are present, refresh
+                // the entire control surface instead.
+                GridControl.Refresh();
+    #endif
             }
         }
-        bool _dropBelow = false;
+    }
+    bool _dropBelow = false;
 
         GroupDragDropState GroupDragDropState
         {
